@@ -87,7 +87,7 @@ Deno.serve(async (req) => {
     headers: { 'x-api-key': key, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
     body: JSON.stringify({
       model: 'claude-haiku-5-5',
-      max_tokens: 1024,
+      max_tokens: 2048,
       system: system(),
       messages: [{ role: 'user', content: `<message>\n${text}\n</message>` }],
     }),
@@ -99,12 +99,17 @@ Deno.serve(async (req) => {
   }
 
   const out = await res.json()
-  const raw: string = out.content?.[0]?.text ?? ''
+  // the reply can start with a non-text block (e.g. thinking), so join every text block
+  const raw: string = (out.content ?? [])
+    .filter((b: { type?: string }) => b?.type === 'text')
+    .map((b: { text?: string }) => b.text ?? '')
+    .join('\n')
+  const peek = (raw || JSON.stringify(out.content ?? out)).slice(0, 160).replace(/\s+/g, ' ')
   const m = raw.match(/\{[\s\S]*\}/)
-  if (!m) return json({ error: 'Could not read the message' }, 502)
+  if (!m) return json({ error: `Could not read the message. Model said: ${peek} [stop: ${out.stop_reason}]` }, 502)
   try {
     return json(clean(JSON.parse(m[0])))
   } catch {
-    return json({ error: 'Could not read the message' }, 502)
+    return json({ error: `Could not parse the model's JSON: ${peek} [stop: ${out.stop_reason}]` }, 502)
   }
 })
