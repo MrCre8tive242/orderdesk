@@ -92,7 +92,11 @@ Deno.serve(async (req) => {
       messages: [{ role: 'user', content: `<message>\n${text}\n</message>` }],
     }),
   })
-  if (!res.ok) return json({ error: `Model error ${res.status}` }, 502)
+  if (!res.ok) {
+    // pass Anthropic's reason through (bad key, no credit, wrong model) so the app can show it
+    const detail = await res.json().then((b) => b?.error?.message).catch(() => null)
+    return json({ error: `Model error ${res.status}${detail ? `: ${detail}` : ''}` }, 502)
+  }
 
   const out = await res.json()
   const raw: string = out.content?.[0]?.text ?? ''

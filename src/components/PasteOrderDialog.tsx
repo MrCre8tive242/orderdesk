@@ -14,7 +14,21 @@ export default function PasteOrderDialog({ onDraft }: { onDraft: (d: OrderDraft)
     setBusy(true)
     const { data, error } = await supabase.functions.invoke('parse-order', { body: { text: t } })
     setBusy(false)
-    if (error || data?.error) return setErr(data?.error ?? error?.message ?? 'Parse failed')
+    if (error) {
+      // supabase-js hides the function's reply behind a generic message; read the real one
+      let msg = error.message || 'Parse failed'
+      const res = (error as { context?: Response }).context
+      if (res && typeof res.json === 'function') {
+        try {
+          const body = await res.json()
+          msg = `${body?.error ?? msg} (HTTP ${res.status})`
+        } catch {
+          msg = `${msg} (HTTP ${res.status})`
+        }
+      }
+      return setErr(msg)
+    }
+    if (data?.error) return setErr(data.error)
     onDraft(data as OrderDraft)
   }
 
