@@ -26,3 +26,34 @@ Order tracker for a custom-shirt print shop. Vite + React + Supabase, installabl
 
 The Anthropic key lives only in Supabase function secrets. Never put it in `.env`.
 Replace `public/icons/icon-192.png` and `icon-512.png` (solid placeholders) with real artwork.
+
+## Command line and MCP tool (no browser needed)
+
+Both live in `tools/` and talk to the same Supabase project as the app, signed in as you, so the
+row-level security rules still apply. They share one code path (`tools/core.mjs`).
+
+Setup: add your app login to `.env` (never commit it):
+
+```
+ORDERDESK_EMAIL=you@example.com
+ORDERDESK_PASSWORD=...
+```
+
+**Command line** (`npm run order -- help` lists everything):
+
+```bash
+npm run order -- new "Hi it's Maria 242-555-0100, need 12 church shirts by Friday, $240" --deposit 100
+npm run order -- add --customer Maria --title "12 church shirts" --qty 12 --price 240 --due 2026-11-20
+npm run order -- list --unpaid
+npm run order -- status 1042 printing
+npm run order -- pay 1042 100 --method cash     # no amount = pay the full balance
+npm run order -- update 1042 --due 2026-11-25
+```
+
+`new` reads free text through the deployed `parse-order` function (no Anthropic key needed locally),
+shows the draft and asks before saving.
+
+**MCP tool** so Claude can update the desk straight from chat. `.mcp.json` registers it for Claude Code
+in this folder; elsewhere run `claude mcp add orderdesk -- node /full/path/to/orderdesk/tools/mcp-server.mjs`.
+Tools: `list_orders`, `get_order`, `create_order`, `update_order`, `set_status`, `add_payment`, `parse_order_text`.
+Then just say: "Maria ordered 12 church shirts, $240, due Friday, paid $100 cash."
