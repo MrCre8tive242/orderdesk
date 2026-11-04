@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "orderdesk": {
+      "command": "node",
+      "args": ["tools/mcp-server.mjs"]
+    }
+  }
+}
